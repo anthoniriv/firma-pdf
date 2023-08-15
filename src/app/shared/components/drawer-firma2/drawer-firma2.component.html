@@ -1,0 +1,7 @@
+<div class="signature-container">
+  <div class="overlay" *ngIf="isDrawing"></div>
+  <canvas #signaturePad></canvas>
+</div>
+<div class="button-container">
+  <button (click)="clearSignature()">Limpiar</button>
+</div>

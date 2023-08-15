@@ -1,0 +1,24 @@
+.signature-container {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.button-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+canvas {
+  border: 1px solid #000;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Capa semi-transparente */
+  pointer-events: none; /* Permite que los eventos pasen a través de la capa */
+}
