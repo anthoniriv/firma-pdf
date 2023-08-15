@@ -4,4 +4,8 @@
 </div>
 <div class="button-container">
   <button (click)="clearSignature()">Limpiar</button>
+  <button (click)="confirmSignature()">Confirmar</button>
+</div>
+<div *ngIf="isConfirmed">
+  <img [src]="signatureImage" alt="Firma confirmada" />
 </div>

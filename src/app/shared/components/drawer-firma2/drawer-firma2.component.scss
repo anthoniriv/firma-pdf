@@ -22,3 +22,10 @@ canvas {
   background-color: rgba(0, 0, 0, 0.5); /* Capa semi-transparente */
   pointer-events: none; /* Permite que los eventos pasen a través de la capa */
 }
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-top: 20px;
+}
