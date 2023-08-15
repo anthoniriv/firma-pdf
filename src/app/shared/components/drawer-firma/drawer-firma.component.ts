@@ -1,11 +1,4 @@
-import {
-  Component,
-  Input,
-  ElementRef,
-  AfterViewInit,
-  ViewChild,
-  OnDestroy,
-} from '@angular/core';
+import { Component, Input, ElementRef, AfterViewInit, ViewChild, OnDestroy } from '@angular/core';
 import { fromEvent, Subscription } from 'rxjs';
 import { switchMap, takeUntil, pairwise } from 'rxjs/operators';
 
@@ -39,37 +32,67 @@ export class DrawerFirmaComponent implements AfterViewInit, OnDestroy {
 
   private captureEvents(canvasEl: HTMLCanvasElement) {
     const mouseDown$ = fromEvent(canvasEl, 'mousedown');
+    const touchStart$ = fromEvent(canvasEl, 'touchstart');
     const mouseMove$ = fromEvent(canvasEl, 'mousemove');
+    const touchMove$ = fromEvent(canvasEl, 'touchmove');
     const mouseUp$ = fromEvent(document, 'mouseup');
-    const mouseLeave$ = fromEvent(canvasEl, 'mouseleave');
+    const touchEnd$ = fromEvent(document, 'touchend');
 
     const drawing$ = mouseDown$.pipe(
-      switchMap((e) => {
+      switchMap((startEvent) => {
         return mouseMove$.pipe(
           takeUntil(mouseUp$),
-          takeUntil(mouseLeave$),
+          takeUntil(touchEnd$),
+          takeUntil(fromEvent(document, 'mouseleave')),
+          pairwise()
+        );
+      })
+    );
+
+    const touchDrawing$ = touchStart$.pipe(
+      switchMap((startEvent) => {
+        return touchMove$.pipe(
+          takeUntil(touchEnd$),
+          takeUntil(fromEvent(document, 'touchcancel')),
           pairwise()
         );
       })
     );
 
     const subscription = drawing$.subscribe(([prevEvent, currentEvent]) => {
-      const rect = canvasEl.getBoundingClientRect();
-
-      const prevPos = {
-        x: (prevEvent as MouseEvent).clientX - rect.left,
-        y: (prevEvent as MouseEvent).clientY - rect.top,
-      };
-
-      const currentPos = {
-        x: (currentEvent as MouseEvent).clientX - rect.left,
-        y: (currentEvent as MouseEvent).clientY - rect.top,
-      };
-
-      this.drawOnCanvas(prevPos, currentPos);
+      this.handleDrawEvent(canvasEl, prevEvent, currentEvent);
     });
 
-    this.subscriptions.push(subscription);
+    const touchSubscription = touchDrawing$.subscribe(([prevEvent, currentEvent]) => {
+      this.handleDrawEvent(canvasEl, prevEvent, currentEvent);
+    });
+
+    this.subscriptions.push(subscription, touchSubscription);
+  }
+
+  private handleDrawEvent(canvasEl: HTMLCanvasElement, prevEvent: Event, currentEvent: Event) {
+    const rect = canvasEl.getBoundingClientRect();
+
+    const prevPos = this.getEventPosition(prevEvent, rect);
+    const currentPos = this.getEventPosition(currentEvent, rect);
+
+    this.drawOnCanvas(prevPos, currentPos);
+  }
+
+  private getEventPosition(event: Event, rect: DOMRect): { x: number; y: number } {
+    if (event instanceof MouseEvent) {
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      };
+    } else if (event instanceof TouchEvent) {
+      const touch = event.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
+    }
+    return { x: 0, y: 0 };
   }
 
   private drawOnCanvas(
@@ -90,6 +113,6 @@ export class DrawerFirmaComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.subscriptions.forEach((subscription) => subscription.unsubscribe());
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
   }
 }
