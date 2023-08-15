@@ -1,4 +1,12 @@
-import { Component, Input, ElementRef, AfterViewInit, ViewChild, OnDestroy } from '@angular/core';
+import {
+  Component,
+  Input,
+  ElementRef,
+  AfterViewInit,
+  ViewChild,
+  OnDestroy,
+  HostListener,
+} from '@angular/core';
 import { fromEvent, Subscription } from 'rxjs';
 import { switchMap, takeUntil, pairwise } from 'rxjs/operators';
 
@@ -15,6 +23,7 @@ export class DrawerFirmaComponent implements AfterViewInit, OnDestroy {
 
   private cx: CanvasRenderingContext2D | null = null;
   private subscriptions: Subscription[] = [];
+  private isScrollLocked = true;
 
   public ngAfterViewInit() {
     const canvasEl = this.canvas.nativeElement;
@@ -60,17 +69,27 @@ export class DrawerFirmaComponent implements AfterViewInit, OnDestroy {
     );
 
     const subscription = drawing$.subscribe(([prevEvent, currentEvent]) => {
-      this.handleDrawEvent(canvasEl, prevEvent, currentEvent);
+      if (!this.isScrollLocked) {
+        this.handleDrawEvent(canvasEl, prevEvent, currentEvent);
+      }
     });
 
-    const touchSubscription = touchDrawing$.subscribe(([prevEvent, currentEvent]) => {
-      this.handleDrawEvent(canvasEl, prevEvent, currentEvent);
-    });
+    const touchSubscription = touchDrawing$.subscribe(
+      ([prevEvent, currentEvent]) => {
+        if (!this.isScrollLocked) {
+          this.handleDrawEvent(canvasEl, prevEvent, currentEvent);
+        }
+      }
+    );
 
     this.subscriptions.push(subscription, touchSubscription);
   }
 
-  private handleDrawEvent(canvasEl: HTMLCanvasElement, prevEvent: Event, currentEvent: Event) {
+  private handleDrawEvent(
+    canvasEl: HTMLCanvasElement,
+    prevEvent: Event,
+    currentEvent: Event
+  ) {
     const rect = canvasEl.getBoundingClientRect();
 
     const prevPos = this.getEventPosition(prevEvent, rect);
@@ -79,7 +98,10 @@ export class DrawerFirmaComponent implements AfterViewInit, OnDestroy {
     this.drawOnCanvas(prevPos, currentPos);
   }
 
-  private getEventPosition(event: Event, rect: DOMRect): { x: number; y: number } {
+  private getEventPosition(
+    event: Event,
+    rect: DOMRect
+  ): { x: number; y: number } {
     if (event instanceof MouseEvent) {
       return {
         x: event.clientX - rect.left,
@@ -113,6 +135,25 @@ export class DrawerFirmaComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    this.subscriptions.forEach((subscription) => subscription.unsubscribe());
+  }
+
+  @HostListener('touchstart', ['$event'])
+  onTouchStart(event: TouchEvent) {
+    if (event.touches.length === 1) {
+      this.isScrollLocked = true;
+    }
+  }
+
+  @HostListener('touchmove', ['$event'])
+  onTouchMove(event: TouchEvent) {
+    if (this.isScrollLocked && event.touches.length === 1) {
+      event.preventDefault();
+    }
+  }
+
+  @HostListener('touchend')
+  onTouchEnd() {
+    this.isScrollLocked = false;
   }
 }
